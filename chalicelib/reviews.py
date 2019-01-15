@@ -52,8 +52,6 @@ def list_reviews(headers: HEADERS, query_params: REQUEST):
     # checking redis
     reviews = rd.get_reviews_for_movie(movie_gid)
     if reviews:
-        log.debug("Polling from redis")
-        log.debug(reviews)
         return proto.ok(reviews)
 
     # doesn't exist, pooling from db

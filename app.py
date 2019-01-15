@@ -14,7 +14,7 @@ app.debug = True
 
 
 def init_log(log):
-    log_level = os.getenv('DEFAULT_LOG_LEVEL') or 'DEBUG'
+    log_level = os.getenv('DEFAULT_LOG_LEVEL') or 'INFO'
     level = getattr(log, log_level) if hasattr(log, log_level) else log.WARNING
     print(f"log level: {log_level}")
     log.basicConfig(
