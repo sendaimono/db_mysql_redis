@@ -1,14 +1,15 @@
 version: '2'
 services:
-  mysql:
-    container_name: mysql-mr
-    image: mysql:5.7.15
+  posgresql:
+    container_name: postgresql-mr
+    image: postgres
+    restart: always
     ports:
-      - "3306:3306"
+      - "5433:5432"
     environment:
-      - "MYSQL_ROOT_PASSWORD=root"
+      POSTGRES_PASSWORD: root
     volumes:
-      - ./data/mysql-mr:/var/lib/mysql/
+      - ./data/posgres-mr:/var/lib/postgresql
   redis:
     container_name: redis-mr
     image: redis
