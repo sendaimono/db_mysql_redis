@@ -52,7 +52,7 @@ def find_movie(headers: HEADERS, query_params: REQUEST):
         return proto.malformed_request('find_movie', 'Missing gid query_param')
     movie = find_movie_by_gid(query_params.get('gid'))
     if movie:
-        return movie.to_dict(True)
+        return proto.ok(movie.to_dict(True))
     return proto.error(404, 'Movie not found')
 
 def find_movie_by_gid(gid: str) -> Movie:

@@ -26,6 +26,7 @@ warnings.filterwarnings(
 def Session():
     return database.session()()
 
+
 class User(database.Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
@@ -34,6 +35,7 @@ class User(database.Base):
     password = Column(String, nullable=False)
     reviews = relationship("Review")
     sessions = relationship("UserSession")
+
 
 class Movie(database.Base):
     __tablename__ = 'movies'
@@ -55,7 +57,7 @@ class Movie(database.Base):
         except Exception as e:
             log.error(str(e))
             return None
-    
+
     def to_dict(self, full_info=False):
         if not full_info:
             return {
@@ -64,11 +66,12 @@ class Movie(database.Base):
                 'short_desc': self.description[0:50] + '...'
             }
         return {
-                'gid': self.gid,
-                'name': self.name,
-                'description': self.description,
-                'premiere_date': self.premiere_date.isoformat()
-            }
+            'gid': self.gid,
+            'name': self.name,
+            'description': self.description,
+            'premiere_date': self.premiere_date.isoformat()
+        }
+
 
 class Review(database.Base):
     __tablename__ = 'reviews'
@@ -90,6 +93,7 @@ class Review(database.Base):
         except Exception as e:
             log.error(str(e))
             return None
+
 
 class UserSession(database.Base):
     __tablename__ = 'sessions'

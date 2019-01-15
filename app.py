@@ -28,10 +28,12 @@ def init_log(log):
 
 init_log(log)
 
+
 @app.route('/')
 def index():
     session = redis.Session()
     return f"Visited {session.incr('hits')}"
+
 
 @app.route(
     '/login',
@@ -58,6 +60,7 @@ def login():
 def register():
     return _forward_json_to(users.register_user)
 
+
 @app.route(
     '/create-movie',
     methods=['POST'],
@@ -69,6 +72,7 @@ def register():
 )
 def create_room():
     return _forward_json_and_headers_to(movies.create_movie)
+
 
 @app.route(
     '/list-movies',
@@ -82,6 +86,7 @@ def create_room():
 def list_movies():
     return movies.list_movies()
 
+
 @app.route(
     '/get-movie',
     methods=['GET'],
@@ -94,6 +99,7 @@ def list_movies():
 def get_movie():
     return _forward_query_params_and_headers_to(movies.find_movie)
 
+
 @app.route(
     '/create-review',
     methods=['POST'],
@@ -105,6 +111,20 @@ def get_movie():
 )
 def create_review():
     return _forward_json_and_headers_to(reviews.create_review)
+
+
+@app.route(
+    '/get-reviews',
+    methods=['GET'],
+    content_types=[
+        'text/plain',
+        'application/json'
+    ],
+    cors=True
+)
+def get_reviews():
+    return _forward_query_params_and_headers_to(reviews.list_reviews)
+
 
 def _forward_json_to(fun):
     try:
@@ -142,5 +162,3 @@ def _forward_query_params_and_headers_to(fun):
              for k, v in app.current_request.headers.items()))
     log.info(f'headers: {headers_as_json}')
     return fun(headers_as_json, query_params)
-
-
