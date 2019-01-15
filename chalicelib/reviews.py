@@ -6,6 +6,7 @@ from chalicelib.movies import find_movie_by_gid
 import chalicelib.json_proto as proto
 import logging as log
 from typing import Sequence, List, Tuple
+import chalicelib.database.rd as rd
 
 
 @authorize_request
@@ -30,6 +31,10 @@ def create_review(user: User, request: REQUEST):
     try:
         session.add(review)
         session.commit()
+        # checking if there are reviews stored in redis for given movie
+        if rd.check_if_exists_reviews_for_movie(movie.gid):
+            # if yes then delete entries
+            rd.del_reviews_for_movie(movie.gid)
         return proto.ok()
     except Exception as e:
         session.close()
@@ -38,10 +43,23 @@ def create_review(user: User, request: REQUEST):
     finally:
         session.close()
 
+
 def list_reviews(headers: HEADERS, query_params: REQUEST):
     if not(query_params and query_params.get('gid')):
         return proto.malformed_request('list_reviews', 'Missing gid query_param')
-    movie = find_movie_by_gid(query_params.get('gid'))
+    movie_gid = query_params.get('gid')
+
+    # checking redis
+    reviews = rd.get_reviews_for_movie(movie_gid)
+    if reviews:
+        log.debug("Polling from redis")
+        log.debug(reviews)
+        return proto.ok(reviews)
+
+    # doesn't exist, pooling from db
+    movie = find_movie_by_gid(movie_gid)
+    if not movie:
+        return proto.error(404, 'Movie not found')
     session = Session()
     try:
         reviews = session.query(
@@ -50,16 +68,16 @@ def list_reviews(headers: HEADERS, query_params: REQUEST):
             Review.mark,
             Review.content).join(
                 Review, User.reviews).filter(Review.movie == movie.id).all()
-        return proto.ok(_review_to_json(reviews))
+        converted = _review_to_json(reviews)
+        # saving reviews to redis
+        rd.set_reviews_for_movie(movie_gid, converted)
+        return proto.ok(converted)
     except Exception as e:
         session.close()
         log.error(e)
-        return proto.internal_error('Error while retrieving users')
+        return proto.internal_error('Error while retrieving reviews')
     finally:
         session.close()
-    if movie:
-        return proto.ok(movie.to_dict(True))
-    return proto.error(404, 'Movie not found')
 
 
 def _review_to_json(reviews: List[Tuple]) -> List[DICT]:
