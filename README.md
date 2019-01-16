@@ -164,6 +164,13 @@ $  source venv/bin/activate
 (venv)$  pip install -r requirements.txt
 ```
 
+### Setup dockers
+
+Go to folder repo folder and run
+```sh
+(venv)$ docker-compose up -d
+```
+
 ### Run migration script for PostgreSQL
 
 Install PosgreSQL server locally, set username to `postgres`(default) and password to `root` and create db `chat` inside it.
@@ -172,13 +179,6 @@ Go to folder repo folder and run
 ```sh
 (venv)$ cd db_schema
 (venv)$ alembic upgrade head
-```
-
-### Setup dockers
-
-Go to folder repo folder and run
-```sh
-(venv)$ docker-compose up -d
 ```
 
 ### Run server
