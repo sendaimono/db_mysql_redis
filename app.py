@@ -125,6 +125,18 @@ def create_review():
 def get_reviews():
     return _forward_query_params_and_headers_to(reviews.list_reviews)
 
+@app.route(
+    '/get-avg-score',
+    methods=['GET'],
+    content_types=[
+        'text/plain',
+        'application/json'
+    ],
+    cors=True
+)
+def get_reviews():
+    return _forward_query_params_and_headers_to(movies.get_avg_score)
+
 
 def _forward_json_to(fun):
     try:
@@ -146,7 +158,7 @@ def _forward_json_and_headers_to(fun):
         headers_as_json = (
             dict((k.lower(), v)
                  for k, v in app.current_request.headers.items()))
-        log.info(f'headers: {headers_as_json}')
+        log.debug(f'headers: {headers_as_json}')
     except json.decoder.JSONDecodeError:
         log.error('Invalid data')
         return proto.error(400, 'Invalid data.')
@@ -160,5 +172,5 @@ def _forward_query_params_and_headers_to(fun):
     headers_as_json = (
         dict((k.lower(), v)
              for k, v in app.current_request.headers.items()))
-    log.info(f'headers: {headers_as_json}')
+    log.debug(f'headers: {headers_as_json}')
     return fun(headers_as_json, query_params)

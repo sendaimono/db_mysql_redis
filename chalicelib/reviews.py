@@ -31,13 +31,20 @@ def create_review(user: User, request: REQUEST):
     try:
         session.add(review)
         session.commit()
+        # ######### V1
         # checking if there are reviews stored in redis for given movie
         if rd.check_if_exists_reviews_for_movie(movie.gid):
             # if yes then delete entries
             rd.del_reviews_for_movie(movie.gid)
+        # checking if there are reviews stored in redis for given movie
+        if rd.check_if_exists_movie_score(movie.gid):
+            # if yes then delete entries
+            rd.del_movie_score(movie.gid)
+        # ######### V2
+        review_name = rd.store_review(review)
+        rd.add_review_to_reviews_store(request['movie_gid'], review_name)
         return proto.ok()
     except Exception as e:
-        session.close()
         log.error(e)
         return proto.internal_error('Error while retrieving users')
     finally:
@@ -48,7 +55,6 @@ def list_reviews(headers: HEADERS, query_params: REQUEST):
     if not(query_params and query_params.get('gid')):
         return proto.malformed_request('list_reviews', 'Missing gid query_param')
     movie_gid = query_params.get('gid')
-
     # checking redis
     reviews = rd.get_reviews_for_movie(movie_gid)
     if reviews:
@@ -66,27 +72,30 @@ def list_reviews(headers: HEADERS, query_params: REQUEST):
             Review.mark,
             Review.content).join(
                 Review, User.reviews).filter(Review.movie == movie.id).all()
-        converted = _review_to_json(reviews)
+        converted = _reviews_to_json(reviews)
         # saving reviews to redis
         rd.set_reviews_for_movie(movie_gid, converted)
         return proto.ok(converted)
     except Exception as e:
-        session.close()
         log.error(e)
         return proto.internal_error('Error while retrieving reviews')
     finally:
         session.close()
 
 
-def _review_to_json(reviews: List[Tuple]) -> List[DICT]:
+def _reviews_to_json(reviews: List[Tuple]) -> List[DICT]:
     converted = []
     if not reviews:
         return converted
     for rev in reviews:
-        current = {}
-        current['author'] = rev[0]
-        current['created'] = rev[1].isoformat()
-        current['mark'] = rev[2]
-        current['content'] = rev[3]
-        converted.append(current)
+        converted.append(_review_to_json(rev))
     return converted
+
+
+def _review_to_json(rev: Tuple) -> DICT:
+    current = {}
+    current['author'] = rev[0]
+    current['created'] = rev[1].isoformat()
+    current['mark'] = rev[2]
+    current['content'] = rev[3]
+    return current

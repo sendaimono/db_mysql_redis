@@ -34,7 +34,6 @@ def login_user(request: REQUEST) -> RESPONSE:
             'token': user_session.session_key
         })
     except Exception as e:
-        session.close()
         log.error(e)
         return proto.internal_error('Error while retrieving users')
     finally:

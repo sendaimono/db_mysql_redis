@@ -6,6 +6,8 @@ import chalicelib.json_proto as proto
 import logging as log
 from typing import Sequence
 import chalicelib.database.rd as rd
+from sqlalchemy import text
+
 
 @authorize_request
 def create_movie(user: User, request: REQUEST):
@@ -29,10 +31,11 @@ def create_movie(user: User, request: REQUEST):
         if rd.check_if_movies_list_exists():
             # if yes then delete entries
             rd.del_movies_list()
-            
-        return proto.ok()
+
+        return proto.ok({
+            'gid': movie.gid
+        })
     except Exception as e:
-        session.close()
         log.error(e)
         return proto.internal_error('Error while retrieving users')
     finally:
@@ -54,11 +57,11 @@ def list_movies():
         rd.set_movies_list(movie_list)
         return proto.ok(movie_list)
     except Exception as e:
-        session.close()
         log.error(e)
         return proto.internal_error('Error while retrieving users')
     finally:
         session.close()
+
 
 def find_movie(headers: HEADERS, query_params: REQUEST):
     if not(query_params and query_params.get('gid')):
@@ -77,6 +80,50 @@ def find_movie(headers: HEADERS, query_params: REQUEST):
         return proto.ok(movie_dct)
     return proto.error(404, 'Movie not found')
 
+
+def get_avg_score(headers: HEADERS, query_params: REQUEST):
+    if not(query_params and query_params.get('gid')):
+        return proto.malformed_request('find_movie', 'Missing gid query_param')
+    movie_gid = query_params.get('gid')
+    # # ###### V1
+    # score_in_rd = rd.get_reviews_list_from_store(movie_gid)
+    # if score_in_rd:
+    #     log.info('Getting score from redis')
+    #     return proto.ok({
+    #         'avg_score': score_in_rd
+    #     })
+    # ###### V2
+    score = rd.get_movie_score(movie_gid)
+    if score:
+        return proto.ok({
+                'avg_score': score
+            })
+    log.info('Getting score from DB')
+    session = Session()
+    try:
+        result = session.execute(
+            text(
+                "select avg(mark) from reviews where movie=(select id from movies where gid=:gid);"),
+            {
+                'gid': movie_gid
+            }
+        )
+        avg_score = result.first()[0]
+        if avg_score:
+            rd.set_movie_score(movie_gid, avg_score)
+            return proto.ok({
+                'avg_score': float(avg_score)
+            })
+        return proto.ok({
+            'avg_score': None
+        })
+    except Exception as e:
+        log.error(e)
+        return proto.error(400, str(e))
+    finally:
+        session.close()
+
+
 def find_movie_by_gid(gid: str) -> Movie:
     session = Session()
     try:
@@ -85,10 +132,7 @@ def find_movie_by_gid(gid: str) -> Movie:
         ).one_or_none()
         return movie
     except Exception as e:
-        session.close()
         log.error(e)
         return None
     finally:
         session.close()
-    
-
