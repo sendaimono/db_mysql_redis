@@ -1,4 +1,5 @@
-alembic
-sqlalchemy
-chalice
-redis
+alembic==1.0.6
+chalice==1.6.2
+redis==3.0.1
+psycopg2==2.7.6.1
+SQLAlchemy==1.2.16
