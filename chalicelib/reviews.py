@@ -7,7 +7,7 @@ import chalicelib.json_proto as proto
 import logging as log
 from typing import Sequence, List, Tuple
 import chalicelib.database.rd as rd
-
+import time
 
 @authorize_request
 def create_review(user: User, request: REQUEST):
@@ -55,17 +55,23 @@ def list_reviews(headers: HEADERS, query_params: REQUEST):
     if not(query_params and query_params.get('gid')):
         return proto.malformed_request('list_reviews', 'Missing gid query_param')
     movie_gid = query_params.get('gid')
-    # checking redis
-    reviews = rd.get_reviews_for_movie(movie_gid)
-    if reviews:
-        return proto.ok(reviews)
 
+    # ------------ comment start -------
+    # checking redis
+    start = time.time() # here
+    reviews = rd.get_reviews_for_movie(movie_gid)
+    end = time.time() # here
+    if reviews:
+        log.info(f'Execution took: {end - start} seconds') # here
+        return proto.ok(reviews)
+    # ------------ comment end --------
     # doesn't exist, pooling from db
     movie = find_movie_by_gid(movie_gid)
     if not movie:
         return proto.error(404, 'Movie not found')
     session = Session()
     try:
+        start = time.time() # here
         reviews = session.query(
             User.username,
             Review.created,
@@ -73,6 +79,8 @@ def list_reviews(headers: HEADERS, query_params: REQUEST):
             Review.content).join(
                 Review, User.reviews).filter(Review.movie == movie.id).all()
         converted = _reviews_to_json(reviews)
+        end = time.time() # here
+        log.info(f'Execution took: {end - start} seconds') # here
         # saving reviews to redis
         rd.set_reviews_for_movie(movie_gid, converted)
         return proto.ok(converted)

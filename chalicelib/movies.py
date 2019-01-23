@@ -7,6 +7,7 @@ import logging as log
 from typing import Sequence
 import chalicelib.database.rd as rd
 from sqlalchemy import text
+import time
 
 
 @authorize_request
@@ -93,14 +94,19 @@ def get_avg_score(headers: HEADERS, query_params: REQUEST):
     #         'avg_score': score_in_rd
     #     })
     # ###### V2
+    start = time.time()
     score = rd.get_movie_score(movie_gid)
+    end = time.time() # here
+    
     if score:
+        log.info(f'Execution took: {end - start} seconds') # here
         return proto.ok({
                 'avg_score': score
             })
     log.info('Getting score from DB')
     session = Session()
     try:
+        start = time.time()
         result = session.execute(
             text(
                 "select avg(mark) from reviews where movie=(select id from movies where gid=:gid);"),
@@ -109,6 +115,8 @@ def get_avg_score(headers: HEADERS, query_params: REQUEST):
             }
         )
         avg_score = result.first()[0]
+        end = time.time() # here
+        log.info(f'Execution took: {end - start} seconds') # here
         if avg_score:
             rd.set_movie_score(movie_gid, avg_score)
             return proto.ok({
